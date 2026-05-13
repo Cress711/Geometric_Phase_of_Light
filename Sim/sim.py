@@ -1,23 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def R(theta):
-    """Macierz rotacji"""
-    return np.array([
-        [np.cos(theta), -np.sin(theta)],
-        [np.sin(theta),  np.cos(theta)]
-    ])
-
-def HWP(theta):
-    """Macierz półfalówki obróconej o kąt theta"""
-    return R(-theta) @ np.array([[1, 0], [0, -1]]) @ R(theta)
-
+#bieguny
 def jones_RCP():
     return (1/np.sqrt(2)) * np.array([1, -1j])
 
 def jones_LCP():
     return (1/np.sqrt(2)) * np.array([1, 1j])
 
+#stokes z definicji
 def stokes_vector(E):
     Ex, Ey = E[0], E[1]
     S0 = np.abs(Ex)**2 + np.abs(Ey)**2
@@ -26,19 +17,31 @@ def stokes_vector(E):
     S3 = 2*np.imag(np.conj(Ex)*Ey)
     return np.array([S1, S2, S3]) / S0
 
+#obrót tylko wokół osi bo na razie nic bardziej skomplikowanego nie robimy
+#ma tylko przejść z góy na dół
+def rot_ax(theta):
+    return np.array([np.cos(2*theta), np.sin(2*theta), 0])
+
+def rotate_on_sphere(S, axis, angle):
+    #rotacja działa tylko dla osi jednostkowej
+    axis = axis / np.linalg.norm(axis)
+    return (
+        S*np.cos(angle)
+        + np.cross(axis, S)*np.sin(angle)
+        + axis*np.dot(axis, S)*(1-np.cos(angle))
+    ) #to jest wzór Rodriguesa na obrot wektorów w 3D
+
 def trajectory(theta, steps=200):
-    """Symulujemy 'płynne przejście' jako rotację fazową 0→π"""
-    psi_in = jones_RCP()
-    
+    S0 = stokes_vector(jones_RCP()) #start
+    axis = rot_ax(theta)
+
     traj = []
-    
-    for delta in np.linspace(0, np.pi, steps):
-        J = R(-theta) @ np.array([[1, 0], [0, np.exp(1j*delta)]]) @ R(theta)
-        psi_out = J @ psi_in
-        S = stokes_vector(psi_out)
+    for phi in np.linspace(0, np.pi, steps):
+        S = rotate_on_sphere(S0, axis, phi)
         traj.append(S)
-    
+
     return np.array(traj)
+
 
 def plot_poincare():
     fig = plt.figure(figsize=(8,8))
@@ -58,7 +61,7 @@ def plot_poincare():
 
     return fig, ax
 
-angles = [0, np.pi/8, np.pi/4, 3*np.pi/8]
+angles = [0, np.pi/8, np.pi/4, 3*np.pi/8] #[rad]
 
 fig, ax = plot_poincare()
 
@@ -73,5 +76,5 @@ ax.scatter(*S_R, color='blue', s=50, label='RCP')
 ax.scatter(*S_L, color='red', s=50, label='LCP')
 
 ax.legend()
-plt.title("Trajektorie na sferze Poincare (RCP → LCP przez HWP)")
+plt.title("Trajektorie na sferze Poincare (RCP → LCP przez półfalówkę)")
 plt.show()
