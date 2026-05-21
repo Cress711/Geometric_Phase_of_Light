@@ -10,7 +10,7 @@ def _normalize(v):
 #(S1, S2, S3) -> (x, y, z)
 #teoretycznie w ogólnym przypadku tu nie powinno być S3 = 0, tylko też funkcja trygonometryczna,
 #ale akurat startujemy z biegunu i nigdy nie obracamy wokół osi S3, więc i tak się wyzeruje
-def _retarder_axis(theta):
+def _element_axis(theta):
     return np.array([np.cos(2 * theta), np.sin(2 * theta), 0.0])
 
 #obracanie "punktu" S (wektora Stokesa)
@@ -43,6 +43,10 @@ def _wrap_to_pi(angle):
     return (angle + np.pi) % (2 * np.pi) - np.pi
 
 
+def _is_on_equator(S, tolerance=1e-8):
+    return abs(S[2]) < tolerance
+
+
 def _equator_arc(S_in, S_out, steps):
     lambda_start = _equator_angle(S_in)
     lambda_end = _equator_angle(S_out)
@@ -73,17 +77,18 @@ def _equator_arc(S_in, S_out, steps):
 
 
 def QWP(S_in, theta=0.0, steps=200):
-    axis = _retarder_axis(theta)
+    axis = _element_axis(theta)
     return _rotation_trajectory(S_in, axis, np.pi / 2, steps)
 
 
-def HWP(S_in, theta=0.0, steps=200, path="physical"):
-    axis = _retarder_axis(theta)
+def HWP(S_in, theta=0.0, steps=200):
+    axis = _element_axis(theta)
     S_out = _rotate_vector(S_in, axis, np.pi)
 
-    if path == "equator":
-        if abs(S_in[2]) < 1e-8 and abs(S_out[2]) < 1e-8:
-            return _equator_arc(S_in, S_out, steps)
+    #jeżeli punkt wejściowy i końcowy są na równiku, to rysujemy łuk po równiku
+    #jeżeli nie są na równiku, to rysujemy normalną fizyczną rotację HWP
+    if _is_on_equator(S_in) and _is_on_equator(S_out):
+        return _equator_arc(S_in, S_out, steps)
 
     return _rotation_trajectory(S_in, axis, np.pi, steps)
 

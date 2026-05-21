@@ -3,48 +3,25 @@ import matplotlib.pyplot as plt
 
 from optical_elements import QWP, HWP, qwp_theta_to_return_to_RCP
 
-
 def RCP():
     return np.array([0.0, 0.0, 1.0])
 
-
 def LCP():
     return np.array([0.0, 0.0, -1.0])
-
-
-def simulate_QWP_only(steps=300):
-    S = RCP()
-    traj = [S]
-
-    t, S = QWP(S, theta=0.0, steps=steps)
-    traj.extend(t)
-
-    return np.array(traj)
-
-
-def simulate_HWP_only(theta_hwp, steps=300):
-    S = RCP()
-    traj = [S]
-
-    t, S = HWP(S, theta=theta_hwp, steps=steps, path="physical")
-    traj.extend(t)
-
-    return np.array(traj)
-
 
 def simulate_QWP_HWP_QWP(theta_hwp, steps=300):
     S = RCP()
     traj = [S]
 
-    # 1. QWP: biegun -> równik
+    #1. QWP: biegun -> równik
     t, S = QWP(S, theta=0.0, steps=steps)
     traj.extend(t)
 
-    # 2. HWP: ruch po równiku
-    t, S = HWP(S, theta=theta_hwp, steps=steps, path="equator")
+    #2. HWP: jeśli jesteśmy na równiku, HWP sama narysuje ruch po równiku
+    t, S = HWP(S, theta=theta_hwp, steps=steps)
     traj.extend(t)
 
-    # 3. QWP: równik -> RCP
+    #3. QWP: równik -> RCP
     theta_qwp2 = qwp_theta_to_return_to_RCP(S)
 
     t, S = QWP(S, theta=theta_qwp2, steps=steps)
@@ -81,7 +58,7 @@ def plot_poincare():
 steps = 300
 
 angles = [
-    0,
+    np.pi/8,
 ]
 
 fig, ax = plot_poincare()
