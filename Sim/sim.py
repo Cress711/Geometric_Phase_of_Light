@@ -36,15 +36,12 @@ def simulate_QWP_HWP_QWP(theta_hwp, steps=300):
     S = RCP()
     traj = [S]
 
-    # 1. QWP: biegun -> równik
     t, S = QWP(S, theta=0.0, steps=steps)
     traj.extend(t)
 
-    # 2. HWP: schematycznie po równiku
     t, S = HWP(S, theta=theta_hwp, steps=steps, path="equator")
     traj.extend(t)
 
-    # 3. QWP: równik -> RCP
     theta_qwp2 = qwp_theta_to_return_to_RCP(S)
 
     t, S = QWP(S, theta=theta_qwp2, steps=steps)
@@ -81,6 +78,9 @@ def plot_poincare():
 steps = 300
 
 angles = [
+    0.0,
+    np.pi / 8,
+    np.pi / 4,
     3 * np.pi / 8
 ]
 

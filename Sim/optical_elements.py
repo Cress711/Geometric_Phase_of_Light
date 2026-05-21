@@ -47,6 +47,10 @@ def _equator_angle(S):
     return np.arctan2(S[1], S[0])
 
 
+def _wrap_to_pi(angle):
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+
 def _equator_arc(S_in, S_out, steps):
     if steps < 2:
         raise ValueError("steps musi być >= 2.")
@@ -54,12 +58,13 @@ def _equator_arc(S_in, S_out, steps):
     lambda_start = _equator_angle(S_in)
     lambda_end = _equator_angle(S_out)
 
-    # idziemy dodatnim kierunkiem po równiku;
-    # dzięki temu dla większego kąta HWP łuk robi się większy
-    while lambda_end <= lambda_start:
-        lambda_end += 2 * np.pi
+    delta = _wrap_to_pi(lambda_end - lambda_start)
 
-    lambdas = np.linspace(lambda_start, lambda_end, steps + 1)[1:]
+    # przypadek dokładnie półokręgu: wybieramy dodatni kierunek
+    if np.isclose(abs(delta), np.pi, atol=1e-12):
+        delta = np.pi
+
+    lambdas = lambda_start + np.linspace(0, delta, steps + 1)[1:]
 
     traj = np.column_stack([
         np.cos(lambdas),
@@ -71,22 +76,11 @@ def _equator_arc(S_in, S_out, steps):
 
 
 def QWP(S_in, theta=0.0, steps=200):
-    """
-    Ćwierćfalówka.
-    Obrót o pi/2 wokół osi zadanej przez theta.
-    """
     axis = _retarder_axis(theta)
     return _rotation_trajectory(S_in, axis, np.pi / 2, steps)
 
 
 def HWP(S_in, theta=0.0, steps=200, path="physical"):
-    """
-    Półfalówka.
-
-    path="physical"  -> fizyczna rotacja o pi wokół osi HWP
-    path="equator"   -> rysowanie przejścia po równiku
-                        używane w schemacie QWP-HWP-QWP
-    """
     axis = _retarder_axis(theta)
     S_out = _rotate_vector(S_in, axis, np.pi)
 
@@ -98,8 +92,5 @@ def HWP(S_in, theta=0.0, steps=200, path="physical"):
 
 
 def qwp_theta_to_return_to_RCP(S_on_equator):
-    """
-    Dobiera kąt drugiej QWP tak, żeby punkt z równika wrócił do RCP.
-    """
     lam = _equator_angle(S_on_equator)
     return 0.5 * (lam - np.pi / 2)
