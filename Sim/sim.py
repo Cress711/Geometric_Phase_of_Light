@@ -1,80 +1,104 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-#bieguny
-def jones_RCP():
-    return (1/np.sqrt(2)) * np.array([1, -1j])
+from optical_elements import QWP, HWP, qwp_theta_to_return_to_RCP
 
-def jones_LCP():
-    return (1/np.sqrt(2)) * np.array([1, 1j])
 
-#stokes z definicji
-def stokes_vector(E):
-    Ex, Ey = E[0], E[1]
-    S0 = np.abs(Ex)**2 + np.abs(Ey)**2
-    S1 = np.abs(Ex)**2 - np.abs(Ey)**2
-    S2 = 2*np.real(np.conj(Ex)*Ey)
-    S3 = 2*np.imag(np.conj(Ex)*Ey)
-    return np.array([S1, S2, S3]) / S0
+def RCP():
+    return np.array([0.0, 0.0, 1.0])
 
-#obrót tylko wokół osi bo na razie nic bardziej skomplikowanego nie robimy
-#ma tylko przejść z góy na dół
-def rot_ax(theta):
-    return np.array([np.cos(2*theta), np.sin(2*theta), 0])
 
-def rotate_on_sphere(S, axis, angle):
-    #rotacja działa tylko dla osi jednostkowej
-    axis = axis / np.linalg.norm(axis)
-    return (
-        S*np.cos(angle)
-        + np.cross(axis, S)*np.sin(angle)
-        + axis*np.dot(axis, S)*(1-np.cos(angle))
-    ) #to jest wzór Rodriguesa na obrot wektorów w 3D
+def LCP():
+    return np.array([0.0, 0.0, -1.0])
 
-def trajectory(theta, steps=200):
-    S0 = stokes_vector(jones_RCP()) #start
-    axis = rot_ax(theta)
 
-    traj = []
-    for phi in np.linspace(0, np.pi, steps):
-        S = rotate_on_sphere(S0, axis, phi)
-        traj.append(S)
+def simulate_QWP_only(steps=300):
+    S = RCP()
+    traj = [S]
+
+    t, S = QWP(S, theta=0.0, steps=steps)
+    traj.extend(t)
+
+    return np.array(traj)
+
+
+def simulate_HWP_only(theta_hwp, steps=300):
+    S = RCP()
+    traj = [S]
+
+    t, S = HWP(S, theta=theta_hwp, steps=steps, path="physical")
+    traj.extend(t)
+
+    return np.array(traj)
+
+
+def simulate_QWP_HWP_QWP(theta_hwp, steps=300):
+    S = RCP()
+    traj = [S]
+
+    # 1. QWP: biegun -> równik
+    t, S = QWP(S, theta=0.0, steps=steps)
+    traj.extend(t)
+
+    # 2. HWP: schematycznie po równiku
+    t, S = HWP(S, theta=theta_hwp, steps=steps, path="equator")
+    traj.extend(t)
+
+    # 3. QWP: równik -> RCP
+    theta_qwp2 = qwp_theta_to_return_to_RCP(S)
+
+    t, S = QWP(S, theta=theta_qwp2, steps=steps)
+    traj.extend(t)
 
     return np.array(traj)
 
 
 def plot_poincare():
-    fig = plt.figure(figsize=(8,8))
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111, projection="3d")
 
-    u = np.linspace(0, 2*np.pi, 100)
+    u = np.linspace(0, 2 * np.pi, 100)
     v = np.linspace(0, np.pi, 100)
+
     x = np.outer(np.cos(u), np.sin(v))
     y = np.outer(np.sin(u), np.sin(v))
     z = np.outer(np.ones_like(u), np.cos(v))
 
-    ax.plot_surface(x, y, z, alpha=0.1, color='gray')
+    ax.plot_surface(x, y, z, alpha=0.12, color="gray")
 
-    ax.set_xlabel('S1')
-    ax.set_ylabel('S2')
-    ax.set_zlabel('S3')
+    ax.set_xlabel("S1")
+    ax.set_ylabel("S2")
+    ax.set_zlabel("S3")
+
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+    ax.set_zlim([-1, 1])
+    ax.set_box_aspect([1, 1, 1])
 
     return fig, ax
 
-angles = [0, np.pi/8, np.pi/4, 3*np.pi/8] #[rad]
+
+steps = 300
+
+angles = [
+    3 * np.pi / 8
+]
 
 fig, ax = plot_poincare()
 
 for theta in angles:
-    traj = trajectory(theta)
-    ax.plot(traj[:,0], traj[:,1], traj[:,2], label=f'γ={theta:.2f}')
+    traj = simulate_QWP_HWP_QWP(theta_hwp=theta, steps=steps)
 
-S_R = stokes_vector(jones_RCP())
-S_L = stokes_vector(jones_LCP())
+    ax.plot(
+        traj[:, 0],
+        traj[:, 1],
+        traj[:, 2],
+        label=f"γ = {theta:.2f} rad"
+    )
 
-ax.scatter(*S_R, color='blue', s=50, label='RCP')
-ax.scatter(*S_L, color='red', s=50, label='LCP')
+ax.scatter(*RCP(), color="blue", s=60, label="RCP")
+ax.scatter(*LCP(), color="red", s=60, label="LCP")
 
 ax.legend()
-plt.title("Trajektorie na sferze Poincare (RCP → LCP przez półfalówkę)")
+plt.title("Trajektorie QWP-HWP-QWP na sferze Poincare")
 plt.show()
