@@ -50,6 +50,17 @@ def QWP_trajectory(psi_in, theta=0.0, steps=300):
     psi_out = QWP_matrix(theta) @ psi_in
     return np.array(traj), psi_out
 
+def HWP_trajectory(psi_in, theta=0.0, steps=300):
+    traj = []
+
+    for delta in np.linspace(0, np.pi, steps + 1)[1:]:
+        J = waveplate(theta, delta)
+        psi = J @ psi_in
+        traj.append(stokes_vector(psi))
+
+    psi_out = HWP_matrix(theta) @ psi_in
+    return np.array(traj), psi_out
+
 
 def HWP_endpoint(psi_in, theta):
     return HWP_matrix(theta) @ psi_in
@@ -94,7 +105,7 @@ def qwp_theta_to_return_to_RCP(S_on_equator):
 
 def simulate(steps=300):
     theta_qwp1 = 0.0
-    theta_hwp = np.pi / 8
+    theta_hwp = np.pi / 3
 
     psi = jones_RCP()
     traj = [stokes_vector(psi)]
@@ -116,6 +127,21 @@ def simulate(steps=300):
 
     t, psi = QWP_trajectory(psi, theta=theta_qwp2, steps=steps)
     traj.extend(t)
+
+    return np.array(traj)
+
+def simulate2(steps=300):
+    psi = jones_RCP()
+    traj = [stokes_vector(psi)]
+
+    theta_hwp1 = 0
+    theta_hwp2 = np.pi / 4
+    t, psi = HWP_trajectory(psi, theta=theta_hwp1, steps=steps)
+    traj.extend(t)
+
+    t, psi = HWP_trajectory(psi, theta=theta_hwp2, steps=steps)
+    traj.extend(t)
+
     return np.array(traj)
 
 
@@ -151,23 +177,22 @@ def plot_poincare():
 
     return fig, ax
 
-
-
-steps = 300
-traj = simulate(steps=steps)
+#tu zmieniać między simulate i simulate2 żeby zobaczyć różne trajektorie
+traj = simulate2(steps=500)
+#simulate - trajektoria QWP-HWP-QWP
+#simulate2 - trajektoria HWP-HWP
+#steps - wygładzenie funkcji
 
 fig, ax = plot_poincare()
-
 ax.plot(
     traj[:, 0],
     traj[:, 1],
     traj[:, 2],
-    label="Jones: QWP(0) -> HWP(pi/8) -> QWP"
 )
 
 ax.scatter(*RCP_stokes(), color="blue", s=60, label="RCP")
 ax.scatter(*LCP_stokes(), color="red", s=60, label="LCP")
 
 ax.legend()
-plt.title("Trajektoria liczona z macierzy Jonesa")
+plt.title("Trajektoria zmiany stanu polaryzacji na sferze Poincarégo")
 plt.show()

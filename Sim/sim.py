@@ -14,18 +14,21 @@ def simulate_QWP_HWP_QWP(theta_hwp, steps=300):
     traj = [S]
 
     #1. QWP: biegun -> równik
-    t, S = QWP(S, theta=0.0, steps=steps)
-    traj.extend(t)
+    #t, S = QWP(S, theta=0.0, steps=steps)
+    #traj.extend(t)
 
     #2. HWP: jeśli jesteśmy na równiku, HWP sama narysuje ruch po równiku
-    t, S = HWP(S, theta=theta_hwp, steps=steps)
+    t, S = HWP(S, theta=0, steps=steps)
+    traj.extend(t)
+
+    t, S = HWP(S, theta=np.pi/4, steps=steps)
     traj.extend(t)
 
     #3. QWP: równik -> RCP
-    theta_qwp2 = qwp_theta_to_return_to_RCP(S)
+    #theta_qwp2 = qwp_theta_to_return_to_RCP(S)
 
-    t, S = QWP(S, theta=theta_qwp2, steps=steps)
-    traj.extend(t)
+    #t, S = QWP(S, theta=theta_qwp2, steps=steps)
+    #traj.extend(t)
 
     return np.array(traj)
 
@@ -70,12 +73,12 @@ for theta in angles:
         traj[:, 0],
         traj[:, 1],
         traj[:, 2],
-        label=f"γ = {theta:.2f} rad"
+        label=f"θ = {np.pi/2:.2f} rad"
     )
 
 ax.scatter(*RCP(), color="blue", s=60, label="RCP")
 ax.scatter(*LCP(), color="red", s=60, label="LCP")
 
 ax.legend()
-plt.title("Trajektorie QWP-HWP-QWP na sferze Poincare")
+plt.title("")
 plt.show()
